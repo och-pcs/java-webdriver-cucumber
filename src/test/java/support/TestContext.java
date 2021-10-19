@@ -33,20 +33,36 @@ public class TestContext {
     }
 
     public static void initialize() {
-        initialize("chrome", "local", false);
+        initialize(
+            System.getProperty("test.browser", "chrome"),
+            System.getProperty("test.envtype", "local"),
+            Boolean.parseBoolean(System.getProperty("test.headless")),
+            Boolean.parseBoolean(System.getProperty("test.force_webdriver", "true"))
+        );
     }
 
     public static void teardown() {
         driver.quit();
     }
 
-    public static void initialize(String browser, String testEnv, boolean isHeadless) {
+    /**
+     * @param browser          a browser to use
+     * @param testEnv          use <code>'local'</code> for test on local machine or <code>'grid'</code> to run it on
+     *                         <a href="https://www.selenium.dev/documentation/grid/">Selenium Grid</a>
+     * @param isHeadless       do not use GUI when possible (on a *NIX without X server, for example)
+     * @param forceWebdriver   do enforce using of a dedicated WebDriver.<br/>
+     *                         The reason (to not enforce):
+     *                         {@link io.github.bonigarcia.wdm.WebDriverManager} has an unreliable paltform detection mechanism.
+     *                         For example: it treats <code>aarch64</code> as <code>x86_64</code>
+     */
+    public static void initialize(String browser, String testEnv, boolean isHeadless, boolean forceWebdriver) {
         Dimension size = new Dimension(1920, 1080);
         Point position = new Point(0, 0);
         if (testEnv.equals("local")) {
             switch (browser) {
                 case "chrome":
-                    WebDriverManager.chromedriver().setup();
+                    if (forceWebdriver)
+                        WebDriverManager.chromedriver().setup();
                     Map<String, Object> chromePreferences = new HashMap<>();
                     chromePreferences.put("profile.default_content_settings.geolocation", 2);
                     chromePreferences.put("profile.default_content_settings.popups", 0);
@@ -70,7 +86,8 @@ public class TestContext {
                     driver = new ChromeDriver(chromeOptions);
                     break;
                 case "firefox":
-                    WebDriverManager.firefoxdriver().setup();
+                    if (forceWebdriver)
+                        WebDriverManager.firefoxdriver().setup();
                     FirefoxOptions firefoxOptions = new FirefoxOptions();
                     if (isHeadless) {
                         FirefoxBinary firefoxBinary = new FirefoxBinary();
@@ -85,11 +102,13 @@ public class TestContext {
                     driver.manage().window().setSize(size);
                     break;
                 case "edge":
-                    WebDriverManager.edgedriver().setup();
+                    if (forceWebdriver)
+                        WebDriverManager.edgedriver().setup();
                     driver = new EdgeDriver();
                     break;
                 case "ie":
-                    WebDriverManager.iedriver().setup();
+                    if (forceWebdriver)
+                        WebDriverManager.iedriver().setup();
                     driver = new InternetExplorerDriver();
                     break;
                 default:
